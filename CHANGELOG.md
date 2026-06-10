@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.2] — 2026-06-10
+
+### Changed
+- Test automated release via GitHub Actions
+
 ## [1.0.1] — 2026-06-10
 
 ### Changed

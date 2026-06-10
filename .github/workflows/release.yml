@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create release zip
+        run: |
+          cd ..
+          # IMPORTANT: zip root folder must remain "church-podcast/" — PUC matches
+          # the folder name to the plugin slug. Do not rename or restructure.
+          zip -r church-podcast.zip church-podcast/ \
+            --exclude "*.git*" \
+            --exclude "*/.github/*" \
+            --exclude "*/node_modules/*" \
+            --exclude "*/.DS_Store" \
+            --exclude "church-podcast/lib/**/.git" \
+            --exclude "church-podcast/lib/**/.git/*"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ../church-podcast.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

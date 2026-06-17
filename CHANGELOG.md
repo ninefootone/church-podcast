@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.0] — 2026-06-17
+
+### Added
+- Per-church podcast feeds at `/feed/podcast-church/{term-slug}/` when `resource-church` taxonomy is present and has terms
+- ACF field group on `resource-church` taxonomy terms for per-church feed overrides (title, description, email, artwork, category, subcategory, language) — each falls back to global settings if left blank
+- Settings page now lists all per-church feed URLs with direct links to edit church term settings
+- Single-church installs with no `resource-church` taxonomy are completely unaffected — combined feed behaviour unchanged
+
+### Fixed
+- `atom:link` self-reference in channel header now correctly points to the feed being rendered (was always pointing to the combined feed URL)
+
 ## [1.0.2] — 2026-06-10
 
 ### Changed

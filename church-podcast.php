@@ -3,14 +3,14 @@
  * Plugin Name: Church Podcast
  * Description: Podcast feed, audio metadata extraction, and podcast settings for sermon resources.
  * Plugin URI: https://github.com/ninefootone/church-podcast
- * Version: 1.0.2
+ * Version: 1.1.0
  * Author: ninefootone creative
  * Author URI: https://www.ninefootone.co.uk
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'CP_VERSION', '1.0.2' );
+define( 'CP_VERSION', '1.1.0' );
 
 // Plugin Update Checker v5.5 (vendored — do not upgrade without testing)
 require_once plugin_dir_path( __FILE__ ) . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -79,7 +79,6 @@ function cp_render_field( $args ) {
         echo '<input type="text" name="cp_settings[' . esc_attr( $key ) . ']" value="' . esc_attr( $value ) . '" class="regular-text" />';
     }
 
-    // Helper text
     $hints = [
         'podcast_category'    => 'e.g. Religion &amp; Spirituality — must match <a href="https://podcasters.apple.com/support/1691-apple-podcasts-categories" target="_blank">Apple\'s category list</a> exactly',
         'podcast_subcategory' => 'e.g. Christianity',
@@ -110,9 +109,11 @@ function cp_sanitize_settings( $input ) {
 }
 
 function cp_render_settings_page() {
+    $church_terms = cp_get_church_terms();
     ?>
     <div class="wrap">
         <h1>Church Podcast Settings</h1>
+        <p>These settings apply to the combined feed. If you have per-church feeds enabled, each church can override these defaults via its term settings in <strong>Sermons → Churches</strong>.</p>
         <form method="post" action="options.php">
             <?php
             settings_fields( 'church_podcast' );
@@ -121,10 +122,37 @@ function cp_render_settings_page() {
             ?>
         </form>
         <hr>
-        <h2>Feed URL</h2>
-        <p>Your podcast feed is available at:</p>
+        <h2>Feed URLs</h2>
+        <h3>Combined Feed</h3>
+        <p>All sermon resources with podcast feed enabled, across all churches:</p>
         <code><?php echo esc_url( home_url( '/feed/podcast/' ) ); ?></code>
         <p class="description">This URL cannot change once submitted to Apple Podcasts or Spotify. Do not change your permalink structure after submission.</p>
+
+        <?php if ( ! empty( $church_terms ) ) : ?>
+        <h3>Per-Church Feeds</h3>
+        <p>Sermons filtered by church. Settings for each feed are configured on the church taxonomy term.</p>
+        <table class="widefat striped" style="max-width:600px;">
+            <thead>
+                <tr>
+                    <th>Church</th>
+                    <th>Feed URL</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $church_terms as $term ) :
+                    $feed_url = cp_get_church_feed_url( $term->slug );
+                ?>
+                <tr>
+                    <td><?php echo esc_html( $term->name ); ?></td>
+                    <td><code><?php echo esc_url( $feed_url ); ?></code></td>
+                    <td><a href="<?php echo esc_url( get_edit_term_link( $term->term_id, 'resource-church' ) ); ?>">Edit settings</a></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+
         <hr>
         <h2>Before You Submit</h2>
         <ol>
@@ -188,39 +216,159 @@ function cp_populate_audio_acf_fields( $post_id ) {
     $duration  = get_post_meta( $attachment_id, '_cp_audio_duration', true );
 
     error_log( 'cp debug — file_size: ' . $file_size . ' duration: ' . $duration . ' post_id: ' . $post_id . ' attachment_id: ' . $attachment_id );
-    
+
     if ( $file_size ) {
-    update_field( 'resource_audio_info_resource_audio_file_size', (int) $file_size, $post_id );
+        update_field( 'resource_audio_info_resource_audio_file_size', (int) $file_size, $post_id );
     }
     if ( $duration ) {
-    update_field( 'resource_audio_info_resource_audio_duration', $duration, $post_id );
+        update_field( 'resource_audio_info_resource_audio_duration', $duration, $post_id );
     }
 }
 
 
 // ============================================================
-// 4. PODCAST FEED
+// 4. ACF FIELD GROUP — per-church feed settings on resource-church taxonomy
 // ============================================================
 
-add_action( 'init', 'cp_register_podcast_feed' );
+add_action( 'acf/init', 'cp_register_church_feed_fields' );
 
-function cp_register_podcast_feed() {
-    add_feed( 'podcast', 'cp_render_podcast_feed' );
+function cp_register_church_feed_fields() {
+    if ( ! function_exists( 'acf_add_local_field_group' ) ) return;
+    if ( ! taxonomy_exists( 'resource-church' ) ) return;
+
+    acf_add_local_field_group( [
+        'key'      => 'group_cp_church_feed',
+        'title'    => 'Podcast Feed Settings',
+        'location' => [
+            [
+                [
+                    'param'    => 'taxonomy',
+                    'operator' => '==',
+                    'value'    => 'resource-church',
+                ],
+            ],
+        ],
+        'fields' => [
+            [
+                'key'               => 'field_cp_church_podcast_title',
+                'label'             => 'Podcast Title',
+                'name'              => 'cp_church_podcast_title',
+                'type'              => 'text',
+                'instructions'      => 'Overrides the global podcast title for this church\'s feed. Leave blank to use the global default.',
+                'required'          => 0,
+            ],
+            [
+                'key'               => 'field_cp_church_podcast_description',
+                'label'             => 'Podcast Description',
+                'name'              => 'cp_church_podcast_description',
+                'type'              => 'textarea',
+                'instructions'      => 'Overrides the global podcast description for this church\'s feed.',
+                'required'          => 0,
+                'rows'              => 4,
+            ],
+            [
+                'key'               => 'field_cp_church_podcast_email',
+                'label'             => 'Contact Email',
+                'name'              => 'cp_church_podcast_email',
+                'type'              => 'email',
+                'instructions'      => 'Not shown publicly. Required by Apple Podcasts. Overrides global email.',
+                'required'          => 0,
+            ],
+            [
+                'key'               => 'field_cp_church_podcast_artwork_url',
+                'label'             => 'Artwork URL (3000×3000px JPEG or PNG)',
+                'name'              => 'cp_church_podcast_artwork_url',
+                'type'              => 'url',
+                'instructions'      => 'Upload to Media Library and paste the URL here. Overrides global artwork.',
+                'required'          => 0,
+            ],
+            [
+                'key'               => 'field_cp_church_podcast_category',
+                'label'             => 'Primary Category',
+                'name'              => 'cp_church_podcast_category',
+                'type'              => 'text',
+                'instructions'      => 'e.g. Religion &amp; Spirituality. Must match Apple\'s category list exactly.',
+                'required'          => 0,
+            ],
+            [
+                'key'               => 'field_cp_church_podcast_subcategory',
+                'label'             => 'Sub-category',
+                'name'              => 'cp_church_podcast_subcategory',
+                'type'              => 'text',
+                'instructions'      => 'e.g. Christianity',
+                'required'          => 0,
+            ],
+            [
+                'key'               => 'field_cp_church_podcast_language',
+                'label'             => 'Language',
+                'name'              => 'cp_church_podcast_language',
+                'type'              => 'text',
+                'instructions'      => 'e.g. en-gb. Overrides global language setting.',
+                'required'          => 0,
+            ],
+        ],
+        'active' => true,
+    ] );
 }
 
-function cp_render_podcast_feed() {
+
+// ============================================================
+// 5. PODCAST FEEDS
+// ============================================================
+
+add_action( 'init', 'cp_register_podcast_feeds' );
+
+function cp_register_podcast_feeds() {
+    // Combined feed — always registered
+    add_feed( 'podcast', 'cp_render_combined_feed' );
+
+    // Per-church feeds — only if the taxonomy exists and has terms
+    if ( ! taxonomy_exists( 'resource-church' ) ) return;
+
+    $terms = cp_get_church_terms();
+    if ( empty( $terms ) ) return;
+
+    foreach ( $terms as $term ) {
+        // Closure captures $term->term_id by value
+        $term_id = $term->term_id;
+        add_feed( 'podcast-church/' . $term->slug, function() use ( $term_id ) {
+            cp_render_podcast_feed( $term_id );
+        });
+    }
+}
+
+function cp_render_combined_feed() {
+    cp_render_podcast_feed( null );
+}
+
+/**
+ * Render the podcast feed.
+ *
+ * @param int|null $church_term_id  Term ID from resource-church taxonomy, or null for the combined feed.
+ */
+function cp_render_podcast_feed( $church_term_id = null ) {
     ob_start();
 
-    $options     = get_option( 'cp_settings', [] );
-    $title       = $options['podcast_title']       ?? get_bloginfo( 'name' ) . ' Sermons';
-    $description = $options['podcast_description'] ?? get_bloginfo( 'description' );
-    $email       = $options['podcast_email']        ?? '';
-    $artwork_url = $options['podcast_artwork_url']  ?? '';
-    $category    = $options['podcast_category']     ?? 'Religion &amp; Spirituality';
-    $subcategory = $options['podcast_subcategory']  ?? 'Christianity';
-    $language    = $options['podcast_language']     ?? 'en-gb';
-    $site_url    = home_url();
-    $feed_url    = home_url( '/feed/podcast/' );
+    $global   = get_option( 'cp_settings', [] );
+    $is_church_feed = ( $church_term_id !== null );
+
+    // Resolve settings: per-church ACF term meta with global fallback
+    $title       = cp_get_church_feed_setting( $church_term_id, 'cp_church_podcast_title',       $global['podcast_title']       ?? get_bloginfo( 'name' ) . ' Sermons' );
+    $description = cp_get_church_feed_setting( $church_term_id, 'cp_church_podcast_description', $global['podcast_description'] ?? get_bloginfo( 'description' ) );
+    $email       = cp_get_church_feed_setting( $church_term_id, 'cp_church_podcast_email',        $global['podcast_email']       ?? '' );
+    $artwork_url = cp_get_church_feed_setting( $church_term_id, 'cp_church_podcast_artwork_url',  $global['podcast_artwork_url'] ?? '' );
+    $category    = cp_get_church_feed_setting( $church_term_id, 'cp_church_podcast_category',     $global['podcast_category']    ?? 'Religion &amp; Spirituality' );
+    $subcategory = cp_get_church_feed_setting( $church_term_id, 'cp_church_podcast_subcategory',  $global['podcast_subcategory'] ?? 'Christianity' );
+    $language    = cp_get_church_feed_setting( $church_term_id, 'cp_church_podcast_language',     $global['podcast_language']    ?? 'en-gb' );
+
+    $site_url = home_url();
+
+    if ( $is_church_feed ) {
+        $term     = get_term( $church_term_id, 'resource-church' );
+        $feed_url = cp_get_church_feed_url( $term->slug );
+    } else {
+        $feed_url = home_url( '/feed/podcast/' );
+    }
 
     $args = [
         'post_type'      => 'resource',
@@ -242,8 +390,17 @@ function cp_render_podcast_feed() {
         ],
     ];
 
+    // Narrow to a specific church when rendering a per-church feed
+    if ( $is_church_feed ) {
+        $args['tax_query'][] = [
+            'taxonomy' => 'resource-church',
+            'field'    => 'term_id',
+            'terms'    => $church_term_id,
+        ];
+    }
+
     $sermons = new WP_Query( $args );
-    
+
     ob_end_clean();
     header( 'Content-Type: application/rss+xml; charset=UTF-8' );
 
@@ -290,8 +447,8 @@ function cp_render_podcast_feed() {
                 $post_url     = get_permalink();
                 $post_desc    = get_field( 'resources_summary', $post_id );
 
-                $audio_id     = get_field( 'resource_audio', $post_id );
-                $audio_url    = $audio_id ? wp_get_attachment_url( $audio_id ) : '';
+                $audio_id    = get_field( 'resource_audio', $post_id );
+                $audio_url   = $audio_id ? wp_get_attachment_url( $audio_id ) : '';
                 $file_size   = (int) ( get_field( 'resource_audio_info_resource_audio_file_size', $post_id ) ?: 0 );
                 $duration    = get_field( 'resource_audio_info_resource_audio_duration', $post_id ) ?: '';
 
@@ -338,4 +495,47 @@ function cp_render_podcast_feed() {
         </channel>
     </rss>
     <?php
+}
+
+
+// ============================================================
+// 6. HELPERS
+// ============================================================
+
+/**
+ * Get all terms from resource-church taxonomy, or empty array if taxonomy doesn't exist.
+ *
+ * @return WP_Term[]
+ */
+function cp_get_church_terms(): array {
+    if ( ! taxonomy_exists( 'resource-church' ) ) return [];
+
+    $terms = get_terms( [
+        'taxonomy'   => 'resource-church',
+        'hide_empty' => false,
+    ] );
+
+    return ( is_wp_error( $terms ) || empty( $terms ) ) ? [] : $terms;
+}
+
+/**
+ * Get the feed URL for a given church term slug.
+ */
+function cp_get_church_feed_url( string $slug ): string {
+    return home_url( '/feed/podcast-church/' . $slug . '/' );
+}
+
+/**
+ * Resolve a feed setting: ACF term meta if set and non-empty, otherwise the provided default.
+ *
+ * @param int|null $term_id   resource-church term ID, or null for combined feed.
+ * @param string   $acf_key  ACF field name on the taxonomy term.
+ * @param string   $default  Fallback value (typically from global cp_settings).
+ */
+function cp_get_church_feed_setting( $term_id, string $acf_key, string $default ): string {
+    if ( $term_id === null ) return $default;
+    if ( ! function_exists( 'get_field' ) ) return $default;
+
+    $value = get_field( $acf_key, 'resource-church_' . $term_id );
+    return ( $value && trim( $value ) !== '' ) ? $value : $default;
 }

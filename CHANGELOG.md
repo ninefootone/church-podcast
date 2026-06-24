@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.1] - 2026-06-24
+
+### Fixed
+- Podcast feed now reads the correct `resource_summary` field for episode descriptions (was `resources_summary`).
+- Podcast feed now reads the correct `resource_bible_passages` field for the episode subtitle (was `resource_first_bible_passage`).
+
+### Changed
+- Podcast feed now returns all qualifying episodes from the last 12 months (rolling window) instead of a fixed 100-item cap. Older sermons remain available on the website.
+
 ## [1.1.0] — 2026-06-17
 
 ### Added

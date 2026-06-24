@@ -3,14 +3,14 @@
  * Plugin Name: Church Podcast
  * Description: Podcast feed, audio metadata extraction, and podcast settings for sermon resources.
  * Plugin URI: https://github.com/ninefootone/church-podcast
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: ninefootone creative
  * Author URI: https://www.ninefootone.co.uk
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'CP_VERSION', '1.1.0' );
+define( 'CP_VERSION', '1.1.1' );
 
 // Plugin Update Checker v5.5 (vendored — do not upgrade without testing)
 require_once plugin_dir_path( __FILE__ ) . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -372,8 +372,14 @@ function cp_render_podcast_feed( $church_term_id = null ) {
 
     $args = [
         'post_type'      => 'resource',
-        'posts_per_page' => 100,
+        'posts_per_page' => -1, // no cap within the date window below
         'post_status'    => 'publish',
+        'date_query'     => [
+            [
+                'after'     => '1 year ago',
+                'inclusive' => true,
+            ],
+        ],
         'meta_query'     => [
             [
                 'key'     => 'resource_include_in_podcast_feed',
@@ -445,7 +451,7 @@ function cp_render_podcast_feed( $church_term_id = null ) {
                 $post_title   = get_the_title();
                 $post_date    = get_the_date( 'r' );
                 $post_url     = get_permalink();
-                $post_desc    = get_field( 'resources_summary', $post_id );
+                $post_desc    = get_field( 'resource_summary', $post_id );
 
                 $audio_id    = get_field( 'resource_audio', $post_id );
                 $audio_url   = $audio_id ? wp_get_attachment_url( $audio_id ) : '';
@@ -457,7 +463,7 @@ function cp_render_podcast_feed( $church_term_id = null ) {
                                 ? $contributors[0]->name
                                 : '';
 
-                $passage      = get_field( 'resource_first_bible_passage', $post_id ) ?: '';
+                $passage      = get_field( 'resource_bible_passages', $post_id ) ?: '';
 
                 $subtitle_parts = array_filter( [ $speaker, $passage ] );
                 $subtitle       = implode( ' — ', $subtitle_parts );

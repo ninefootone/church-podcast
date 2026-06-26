@@ -3,14 +3,14 @@
  * Plugin Name: Church Podcast
  * Description: Podcast feed, audio metadata extraction, and podcast settings for sermon resources.
  * Plugin URI: https://github.com/ninefootone/church-podcast
- * Version: 1.1.2
+ * Version: 1.1.3
  * Author: ninefootone creative
  * Author URI: https://www.ninefootone.co.uk
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'CP_VERSION', '1.1.2' );
+define( 'CP_VERSION', '1.1.3' );
 
 // Plugin Update Checker v5.5 (vendored — do not upgrade without testing)
 require_once plugin_dir_path( __FILE__ ) . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -207,24 +207,19 @@ function cp_populate_audio_acf_fields( $post_id ) {
 
     if ( get_post_type( $post_id ) !== 'resource' ) return;
 
-    $terms = get_the_terms( $post_id, 'resource-type' );
-    if ( ! $terms || is_wp_error( $terms ) ) return;
-    $term_slugs = wp_list_pluck( $terms, 'slug' );
-    if ( ! in_array( 'sermon', $term_slugs, true ) ) return;
-
-    $attachment_id = get_field( 'resource_audio', $post_id );
+    $attachment_id = get_post_meta( $post_id, 'resource_audio', true );
     if ( ! $attachment_id ) return;
 
     $file_size = get_post_meta( $attachment_id, '_cp_audio_file_size', true );
     $duration  = get_post_meta( $attachment_id, '_cp_audio_duration', true );
 
-    error_log( 'cp debug — file_size: ' . $file_size . ' duration: ' . $duration . ' post_id: ' . $post_id . ' attachment_id: ' . $attachment_id );
+    error_log( 'cp debug — file_size: ' . $file_size . ' duration: ' . $duration . ' post_id: ' . $post_id );
 
     if ( $file_size ) {
-        update_field( 'resource_audio_info_resource_audio_file_size', (int) $file_size, $post_id );
+        update_post_meta( $post_id, 'resource_audio_info_resource_audio_file_size', (int) $file_size );
     }
     if ( $duration ) {
-        update_field( 'resource_audio_info_resource_audio_duration', $duration, $post_id );
+        update_post_meta( $post_id, 'resource_audio_info_resource_audio_duration', $duration );
     }
 }
 
@@ -458,8 +453,8 @@ function cp_render_podcast_feed( $church_term_id = null ) {
 
                 $audio_id    = get_field( 'resource_audio', $post_id );
                 $audio_url   = $audio_id ? wp_get_attachment_url( $audio_id ) : '';
-                $file_size   = (int) ( get_field( 'resource_audio_info_resource_audio_file_size', $post_id ) ?: 0 );
-                $duration    = get_field( 'resource_audio_info_resource_audio_duration', $post_id ) ?: '';
+                $file_size   = (int) ( get_post_meta( $post_id, 'resource_audio_info_resource_audio_file_size', true ) ?: 0 );
+                $duration    = get_post_meta( $post_id, 'resource_audio_info_resource_audio_duration', true ) ?: '';
 
                 $contributors = get_the_terms( $post_id, 'resource-contributor' );
                 $speaker      = ( $contributors && ! is_wp_error( $contributors ) )

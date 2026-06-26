@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.3] - 2026-06-26
+
+### Fixed
+- Audio file size and duration now populate reliably during WP All Import. Population runs on `pmxi_saved_post` (WP All Import does not fire `acf/save_post`) and writes values via `update_post_meta` instead of `update_field`, which was terminating large imports. The feed reads the same meta keys directly to stay consistent.
+
 ## [1.1.2] - 2026-06-24
 
 ### Fixed

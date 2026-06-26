@@ -3,14 +3,14 @@
  * Plugin Name: Church Podcast
  * Description: Podcast feed, audio metadata extraction, and podcast settings for sermon resources.
  * Plugin URI: https://github.com/ninefootone/church-podcast
- * Version: 1.1.1
+ * Version: 1.1.2
  * Author: ninefootone creative
  * Author URI: https://www.ninefootone.co.uk
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'CP_VERSION', '1.1.1' );
+define( 'CP_VERSION', '1.1.2' );
 
 // Plugin Update Checker v5.5 (vendored — do not upgrade without testing)
 require_once plugin_dir_path( __FILE__ ) . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -199,6 +199,9 @@ function cp_format_duration( int $seconds ): string {
 // ============================================================
 
 add_action( 'acf/save_post', 'cp_populate_audio_acf_fields', 20 );
+
+// WP All Import does not fire acf/save_post — run population after each imported row.
+add_action( 'pmxi_saved_post', 'cp_populate_audio_acf_fields', 10, 1 );
 
 function cp_populate_audio_acf_fields( $post_id ) {
 

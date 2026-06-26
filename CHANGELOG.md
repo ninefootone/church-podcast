@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.2] - 2026-06-24
+
+### Fixed
+- Audio file size and duration now populate on imported sermons. WP All Import does not fire `acf/save_post`, so the metadata-population step now also runs on `pmxi_saved_post`.
+
 ## [1.1.1] - 2026-06-24
 
 ### Fixed

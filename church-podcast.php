@@ -3,14 +3,14 @@
  * Plugin Name: Church Podcast
  * Description: Podcast feed, audio metadata extraction, and podcast settings for sermon resources.
  * Plugin URI: https://github.com/ninefootone/church-podcast
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: ninefootone creative
  * Author URI: https://www.ninefootone.co.uk
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'CP_VERSION', '1.1.3' );
+define( 'CP_VERSION', '1.1.4' );
 
 // Plugin Update Checker v5.5 (vendored — do not upgrade without testing)
 require_once plugin_dir_path( __FILE__ ) . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -409,8 +409,7 @@ function cp_render_podcast_feed( $church_term_id = null ) {
     header( 'Content-Type: application/rss+xml; charset=UTF-8' );
 
     echo '<?xml version="1.0" encoding="UTF-8"?>';
-    ?>
-    <rss version="2.0"
+    ?><rss version="2.0"
         xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
         xmlns:content="http://purl.org/rss/1.0/modules/content/"
         xmlns:atom="http://www.w3.org/2005/Atom">
@@ -449,19 +448,26 @@ function cp_render_podcast_feed( $church_term_id = null ) {
                 $post_title   = get_the_title();
                 $post_date    = get_the_date( 'r' );
                 $post_url     = get_permalink();
-                $post_desc    = get_field( 'resource_summary', $post_id );
 
                 $audio_id    = get_field( 'resource_audio', $post_id );
                 $audio_url   = $audio_id ? wp_get_attachment_url( $audio_id ) : '';
-                $file_size   = (int) ( get_post_meta( $post_id, 'resource_audio_info_resource_audio_file_size', true ) ?: 0 );
-                $duration    = get_post_meta( $post_id, 'resource_audio_info_resource_audio_duration', true ) ?: '';
+                $file_size   = (int) ( get_field( 'resource_audio_info_resource_audio_file_size', $post_id ) ?: 0 );
+                $duration    = get_field( 'resource_audio_info_resource_audio_duration', $post_id ) ?: '';
 
                 $contributors = get_the_terms( $post_id, 'resource-contributor' );
                 $speaker      = ( $contributors && ! is_wp_error( $contributors ) )
-                                ? $contributors[0]->name
-                                : '';
+                ? $contributors[0]->name
+                : '';
 
                 $passage      = get_field( 'resource_bible_passages', $post_id ) ?: '';
+
+                $post_desc = get_field( 'resource_summary', $post_id );
+                if ( ! $post_desc ) {
+                    $post_desc = implode( ' — ', array_filter( [ $speaker, $passage ] ) );
+                }
+                if ( ! $post_desc ) {
+                    $post_desc = $post_title;
+                }
 
                 $subtitle_parts = array_filter( [ $speaker, $passage ] );
                 $subtitle       = implode( ' — ', $subtitle_parts );

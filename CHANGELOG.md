@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.4] - 2026-07-06
+
+### Fixed
+- XML whitespace between declaration and `<rss>` tag removed — was causing feed validator parse failures
+- Episode description fallback now correctly uses `resource_summary` field (was `resources_summary`)
+- Episode subtitle now correctly uses `resource_bible_passages` field (was `resource_first_bible_passage`)
+- Description fallback chain: uses `resource_summary` if populated, otherwise speaker + passage, otherwise post title
+- Cloudflare Worker now handles CORS preflight (OPTIONS) and exposes `Accept-Ranges`, `Content-Range`, `Content-Length` headers for byte-range support
+
 ## [1.1.3] - 2026-06-26
 
 ### Fixed

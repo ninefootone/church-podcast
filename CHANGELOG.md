@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.5] - 2026-07-06
+
+### Fixed
+- Removed debug `error_log` call from `cp_populate_audio_acf_fields` that was logging on every ACF save and WP All
+
 ## [1.1.4] - 2026-07-06
 
 ### Fixed

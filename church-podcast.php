@@ -3,14 +3,14 @@
  * Plugin Name: Church Podcast
  * Description: Podcast feed, audio metadata extraction, and podcast settings for sermon resources.
  * Plugin URI: https://github.com/ninefootone/church-podcast
- * Version: 1.1.5
+ * Version: 1.1.6
  * Author: ninefootone creative
  * Author URI: https://www.ninefootone.co.uk
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'CP_VERSION', '1.1.5' );
+define( 'CP_VERSION', '1.1.6' );
 
 // Plugin Update Checker v5.5 (vendored — do not upgrade without testing)
 require_once plugin_dir_path( __FILE__ ) . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -370,11 +370,11 @@ function cp_render_podcast_feed( $church_term_id = null ) {
         'post_type'      => 'resource',
         'posts_per_page' => -1, // no cap within the date window below
         'post_status'    => 'publish',
-        'date_query'     => [
-            [
-                'after'     => '1 year ago',
-                'inclusive' => true,
-            ],
+        [
+            'key'     => 'resource_date',
+            'value'   => date( 'Ymd', strtotime( '-1 year' ) ),
+            'compare' => '>=',
+            'type'    => 'NUMERIC',
         ],
         'meta_query'     => [
             [
@@ -444,7 +444,10 @@ function cp_render_podcast_feed( $church_term_id = null ) {
 
                 $post_id      = get_the_ID();
                 $post_title   = get_the_title();
-                $post_date    = get_the_date( 'r' );
+                $acf_date  = get_post_meta( $post_id, 'resource_date', true );
+                $post_date = $acf_date
+                    ? DateTime::createFromFormat( 'Ymd', $acf_date )->format( 'r' )
+                    : get_the_date( 'r' );
                 $post_url     = get_permalink();
 
                 $audio_id    = get_field( 'resource_audio', $post_id );

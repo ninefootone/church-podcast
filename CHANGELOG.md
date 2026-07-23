@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.6] - 2026-07-23
+
+### Fixed
+- Changed podcast date to resource date rather than publish date.
+
 ## [1.1.5] - 2026-07-06
 
 ### Fixed
